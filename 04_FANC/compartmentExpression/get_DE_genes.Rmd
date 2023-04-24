@@ -1,0 +1,77 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(limma)
+library(dplyr)
+```
+
+```{r}
+data = read.table("RNA_transformed_tpm_minus_sva_contribs.txt", sep="\t", header=T, as.is=T)
+batches = colnames(data)
+day = unlist(lapply(batches, function(x) unlist(strsplit(x,"_",fixed=T))[1]))
+age = unlist(lapply(batches, function(x) unlist(strsplit(x,"_",fixed=T))[2]))
+batches = data.frame(Day=day, Age=age, Sample=colnames(data))
+Grouping = factor(paste0(batches$Day,".",batches$Age))
+batches$Grouping = Grouping
+batches
+```
+
+```{r}
+fit = lmFit(asinh(as.matrix(data)),model.matrix(~0+Grouping))
+colnames(fit)
+```
+
+```{r}
+colnames(fit$coefficients)
+```
+
+```{r}
+#create contrasts of interest 
+cont.matrix=makeContrasts(
+    d0_Y_vs_A="Groupingd0.Y - Groupingd0.A",
+    levels=model.matrix(~0+Grouping))
+```
+
+```{r}
+pval_thresh=0.05
+lfc_thresh=log2(1.5)
+```
+
+```{r}
+fit2=contrasts.fit(fit,cont.matrix)
+e=eBayes(fit2)
+comparisons=colnames(cont.matrix)
+```
+
+```{r}
+tab<-topTable(e, number=nrow(e),coef=1,lfc=lfc_thresh, p.value = pval_thresh)
+up=sum(tab$logFC>0)
+down=sum(tab$logFC<0)
+sig=nrow(tab)
+curtitle=paste(comparisons[1],'\n','sig:',sig,'\n','up:',up,'\n','down:',down,'\n')
+print(curtitle)
+vals=topTable(e,number=nrow(e),coef=1)
+vals$pscaled=-1*log10(vals$adj.P.Val)
+vals$sig=vals$adj.P.Val<pval_thresh & abs(vals$logFC)>lfc_thresh 
+print(ggplot(data=vals,
+             aes(y=pscaled,x=logFC,color=sig))+
+        geom_point(alpha=0.1)+
+        xlab("log2(FC)")+
+        ylab("-log10(pval)")+
+        ggtitle(curtitle)+
+        theme_bw()+
+        scale_color_manual(values=c("#000000","#FF0000")))
+```
+
+```{r}
+write.table(vals[vals$sig==T,], "DE_0.05padj_log2(1.5)LFC.tsv", sep="\t", quote=F, row.names=T, col.names=T)
+write.table(rownames(vals[vals$sig==T,]), "DE_0.05padj_log2(1.5)LFC_genenames.tsv", sep="\t", quote=F, row.names=F, col.names=F)
+```
+

@@ -1,0 +1,48 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(pheatmap)
+library(ggplot2)
+
+#projdir = "C:/Users/NOBEL/Downloads"
+projdir = "C:\\Users\\benjy\\Downloads\\dumpedMats"
+
+young.r1.files = list.files(file.path(projdir, "4140-KS-1", "interaction_maps"), full.names = T)
+young.r2.files = list.files(file.path(projdir, "4504-KS-1", "interaction_maps"), full.names = T)
+aged.r1.files = list.files(file.path(projdir, "4140-KS-2", "interaction_maps"), full.names = T)
+aged.r2.files = list.files(file.path(projdir, "4140-KS-3", "interaction_maps"), full.names = T)
+
+young.r1 = lapply(young.r1.files, function(x) read.table(x, as.is=T, header=F))
+young.r2 = lapply(young.r2.files, function(x) read.table(x, as.is=T, header=F))
+aged.r1 = lapply(aged.r1.files, function(x) read.table(x, as.is=T, header=F))
+aged.r2 = lapply(aged.r2.files, function(x) read.table(x, as.is=T, header=F))
+
+```
+
+```{r}
+plot(-10:10, asinh(-10:10))
+lines(-10:10, log2(-10:10))
+```
+
+```{r}
+young.cor = cor(asinh(aged.r1[[1]]), asinh(aged.r2[[1]]), use="pairwise.complete.obs", method="pearson")
+plot(young.cor)
+```
+
+
+```{r}
+for (i in 1:20) {
+  chr = ifelse(i==20, "X", i)
+  pheatmap(asinh(aged.r1[[i]] - aged.r2[[i]]), 
+           cluster_cols = F, cluster_rows = F, 
+           show_rownames = F, show_colnames = F,
+           main = paste0("chr",chr),
+           filename = file.path(projdir,"aged comparison",sprintf('aged_NONE_chr%s_asinh_difference.png',chr)))
+}
+# ,
+#            filename = file.path(projdir,"young comparison",sprintf('young_chr%s_asinh_difference.png',chr))
+```
+
