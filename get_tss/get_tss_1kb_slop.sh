@@ -1,0 +1,1 @@
+bedtools slop -i tss.gencode.vM25.basic.annotation.filtered.uniq.knownGenes.bed -b 1000 -g /nas/homes/benyang/Genome_References/sizes.mm10 | sort -k1,1 -k2,2n | uniq > tss_1kb_slop.bed
